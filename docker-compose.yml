@@ -1,0 +1,15 @@
+services:
+  file-manager:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_USERNAME: ${APP_USERNAME:-admin}
+      APP_PASSWORD: ${APP_PASSWORD:-change-me-now}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-long-random-secret}
+      FILES_ROOT: /data/files
+      APP_DATA_DIR: /app/data
+    volumes:
+      - ${HOST_FILES_DIR:-./data/files}:/data/files
+      - ${HOST_APP_DATA_DIR:-./data/app}:/app/data
+    restart: unless-stopped
