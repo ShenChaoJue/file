@@ -15,7 +15,7 @@ The first version will not include multi-user accounts, public share links, comp
 
 The first version includes:
 
-- Single-user login.
+- Single-user login, with the initial account created from deployment environment variables.
 - Browsing a configured root directory, such as `/data/files` inside the container.
 - Icon and list view modes.
 - Back/forward navigation, path navigation, search, upload, and new-folder actions.
@@ -62,13 +62,13 @@ The root directory sandbox is the most important backend rule. Every user-provid
 
 The implementation must reject path traversal attempts, absolute paths outside the root, encoded traversal, and symlink escapes. Symlink handling should be conservative: operations may show symlinks, but following a symlink outside the root must be blocked.
 
-Deletion should move items into an application-managed trash location under the root or app data area instead of immediately removing them permanently. This reduces accidental data loss in the first version.
+Deletion should move items into an application-managed trash directory in app data, separate from the managed file root. The trash record should preserve the original relative path, original name, and deletion time. The first version does not need a full restore UI, but delete operations must not immediately remove files permanently.
 
 ## Backend Components
 
 ### Auth
 
-Handles single-user login, password hashing, and authenticated API access. The first version should avoid registration flows and admin panels.
+Handles single-user login, password hashing, and authenticated API access. The initial username and password come from deployment environment variables such as `APP_USERNAME` and `APP_PASSWORD`. On first startup, the backend creates the user in SQLite if no user exists. If a user already exists, startup must not overwrite the stored password hash. The first version should avoid registration flows and admin panels.
 
 ### Filesystem
 
@@ -84,7 +84,7 @@ Handles regular multipart uploads. Chunked uploads are out of scope for the firs
 
 ### Search
 
-Performs basic filename search under the managed root. It must enforce limits on scan depth, total visited entries, and response size so large directories do not block the service indefinitely.
+Performs basic filename search from the current directory downward. The first version searches file and folder names only, not file contents. Global root-wide search can be added later as a separate mode. Search must enforce limits on scan depth, total visited entries, and response size so large directories do not block the service indefinitely.
 
 ## Frontend Components
 
@@ -106,7 +106,7 @@ Renders the current directory in icon view or list view. It receives file entrie
 
 ### ContextMenu
 
-Provides right-click actions such as open, download, rename, copy, move, delete, and show details. Available actions depend on current selection.
+Provides right-click actions such as open folder, download file, rename, copy, move, delete, and show details. Available actions depend on current selection. `Show details` is limited to metadata such as size, type, modified time, and relative path; content preview is out of scope for the first version.
 
 ### Dialogs And Panels
 
@@ -175,10 +175,11 @@ Testing focuses on the highest-risk behavior.
 ### Deployment Verification
 
 - `docker compose up` starts the app service.
+- `APP_USERNAME` and `APP_PASSWORD` create the initial user on first startup without overwriting an existing user.
 - The configured host file directory is readable and writable from the app.
 - SQLite metadata persists across container restarts.
 - The built frontend is served by the backend.
 
 ## Acceptance Criteria
 
-The first version is complete when a user can deploy the app on Linux with Docker Compose, open it in a browser, log in as the configured single user, and manage files under the mounted root directory with a modern macOS Finder-like interface. The user must be able to browse, upload, download, rename, delete to trash, move, copy, create folders, search by filename, switch between icon and list views, use multi-select, use a right-click context menu, and drag items to move them without escaping the configured root directory.
+The first version is complete when a user can deploy the app on Linux with Docker Compose, open it in a browser, log in as the configured single user, and manage files under the mounted root directory with a modern macOS Finder-like interface. The user must be able to browse, upload, download, rename, delete to app-managed trash, move, copy, create folders, search by filename from the current directory, switch between icon and list views, use multi-select, use a right-click context menu, and drag items to move them without escaping the configured root directory.
